@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, Check, CheckCircle2, Clock, Mail, RefreshCw, ShieldCheck, UserRound, UserRoundPlus } from 'lucide-react';
 import { Dialog } from './ui';
 import './registration.css';
+import { roleLabels, type StaffRole } from './access-model';
 
 type RegistrationProfile = {
   status: 'new' | 'pending' | 'approved' | 'rejected' | 'active' | 'disabled';
@@ -81,7 +82,7 @@ export function RegistrationRequests({ requests, busy, error, review, refresh }:
   review: (body: Record<string, unknown>) => Promise<boolean>; refresh: () => void;
 }) {
   const [selected, setSelected] = useState<{ request: RegistrationRecord; approve: boolean } | null>(null);
-  const [role, setRole] = useState('waiter');
+  const [role, setRole] = useState<StaffRole>('waiter');
   const close = useCallback(() => { if (!busy) setSelected(null); }, [busy]);
   return <section className="registration-requests" aria-labelledby="registration-requests-title">
     <div className="registration-requests-heading"><div><span className="eyebrow">NOVAS PESSOAS NA EQUIPE</span><h3 id="registration-requests-title">Solicitações de cadastro <span>{requests.length}</span></h3><p>Confira a pessoa e escolha quais áreas ela poderá acessar.</p></div><button className="btn secondary" disabled={busy} onClick={refresh}><RefreshCw size={15} />Atualizar</button></div>
@@ -92,9 +93,9 @@ export function RegistrationRequests({ requests, busy, error, review, refresh }:
     {selected && <Dialog title={selected.approve ? 'Liberar acesso à equipe.' : 'Recusar esta solicitação?'} eyebrow="ANÁLISE DE CADASTRO" onClose={close}>
       <div className="registration-review-person"><strong>{selected.request.name}</strong><span><Mail size={15} />{selected.request.email}</span></div>
       <form onSubmit={async event => { event.preventDefault(); if (busy) return; const ok = await review({ action: selected.approve ? 'approve-registration' : 'reject-registration', id: selected.request.id, ...(selected.approve ? { role } : {}) }); if (ok) setSelected(null); }}>
-        {selected.approve ? <><label className="field" htmlFor="registration-role">Responsabilidade<select id="registration-role" value={role} onChange={e => setRole(e.target.value)} disabled={busy}><option value="waiter">Garçom</option><option value="admin">Administrador</option></select></label><p className="registration-role-help">{role === 'admin' ? 'Administrador acessa toda a operação, incluindo caixa, estoque, relatórios e gestão da equipe.' : 'Garçom acessa mesas, comandas, consulta do cardápio, chamados e entregas.'}</p></> : <p className="dialog-subtitle">O cadastro não dará acesso ao restaurante. Você poderá cadastrar essa pessoa manualmente depois, se necessário.</p>}
+        {selected.approve ? <><label className="field" htmlFor="registration-role">Responsabilidade<select id="registration-role" value={role} onChange={e => setRole(e.target.value as StaffRole)} disabled={busy}><option value="waiter">Garçom</option><option value="kitchen">Cozinha</option><option value="admin">Administrador</option></select></label><p className="registration-role-help">{role === 'admin' ? 'Administrador acessa toda a operação, incluindo caixa, estoque, relatórios e gestão da equipe.' : role === 'kitchen' ? 'Cozinha acessa a fila de pedidos, inicia o preparo e marca pratos prontos. Não acessa caixa, estoque ou gestão da equipe.' : 'Garçom acessa mesas, comandas, consulta do cardápio, chamados e entregas.'}</p></> : <p className="dialog-subtitle">O cadastro não dará acesso ao restaurante. Você poderá cadastrar essa pessoa manualmente depois, se necessário.</p>}
         {error && <p className="form-error" role="alert">{error}</p>}
-        <button type="submit" className={'btn full ' + (selected.approve ? 'primary' : 'secondary')} disabled={busy}>{busy ? 'Salvando…' : selected.approve ? 'Aprovar como ' + (role === 'admin' ? 'administrador' : 'garçom') : 'Confirmar recusa'}</button>
+        <button type="submit" className={'btn full ' + (selected.approve ? 'primary' : 'secondary')} disabled={busy}>{busy ? 'Salvando…' : selected.approve ? 'Aprovar como ' + roleLabels[role].toLowerCase() : 'Confirmar recusa'}</button>
       </form>
     </Dialog>}
   </section>;

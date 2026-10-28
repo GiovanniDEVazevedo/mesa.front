@@ -5,7 +5,8 @@ import { Badge, Dialog, newId } from './ui';
 import { AdminPanel, ReportsPanel } from './admin';
 import { StockPanel } from './inventory';
 import { AccessScreen, AccessPanel, DeliveriesPanel, KitchenPanel } from './operation-panels';
-import type { Session, StaffUser } from './access-model';
+import { roleLabels, type Session, type StaffUser } from './access-model';
+import { KitchenQueue } from './kitchen-queue';
 import {
   LayoutGrid, ChefHat, ReceiptText, BookOpen, Bell, Plus, ChevronRight, Search, Users, Clock,
   Check, Armchair, ArrowRight, X, Minus, Send, WifiOff, RefreshCw, Volume2, VolumeX,
@@ -14,13 +15,14 @@ import {
 } from 'lucide-react';
 import { type State, type Table, type Account, type Order, type Product, money, accountTotal, orderTotal, labels } from './model';
 
-type View = 'salon' | 'kitchen' | 'accounts' | 'menu' | 'admin' | 'reports' | 'stock' | 'service' | 'access';
+type View = 'queue' | 'salon' | 'kitchen' | 'accounts' | 'menu' | 'admin' | 'reports' | 'stock' | 'service' | 'access';
 type Modal = { kind: 'guest'; tableId: string; seat: number } | { kind: 'order' } | { kind: 'account'; id: string } | { kind: 'pay'; id: string } | { kind: 'call' } | { kind: 'calls' } | { kind: 'help' } | { kind: 'table' } | null;
 type Line = { productId: string; quantity: number };
 type ApiResponse = State & { error?: string; result?: { id?: string } };
 const nav = [
   { id: 'salon' as View, name: 'Salão e mesas', icon: LayoutGrid },
   { id: 'service' as View, name: 'Entregas', icon: Smartphone },
+  { id: 'queue' as View, name: 'Fila de pedidos', icon: ChefHat },
   { id: 'kitchen' as View, name: 'Botão da cozinha', icon: Bell },
   { id: 'accounts' as View, name: 'Comandas', icon: ReceiptText },
   { id: 'menu' as View, name: 'Cardápio', icon: BookOpen },
@@ -47,11 +49,12 @@ export default function Home() {
 function Operation({user,onAccessChanged}:{user:StaffUser;onAccessChanged:()=>Promise<void>}) {
   const [state, setState] = useState<State>(empty);
   const [loaded, setLoaded] = useState(false);
-  const [view, setView] = useState<View>('salon');
+  const [view, setView] = useState<View>(()=>user.role==='kitchen'?'queue':'salon');
   const [tableId, setTableId] = useState('t03');
   const person=user.name;
   const isAdmin=user.role==='admin';
-  const allowedNav=nav.filter(n=>isAdmin||['salon','service','accounts','menu'].includes(n.id));
+  const isKitchen=user.role==='kitchen';
+  const allowedNav=nav.filter(n=>isAdmin||(isKitchen?n.id==='queue':['salon','service','accounts','menu'].includes(n.id)));
   const waiters=Array.from(new Set([person,...(state.staffNames||[]),...state.accounts.map(a=>a.waiter)]));
   const draftKey='mesa-draft-v2:'+user.id;
   const [modal, setModal] = useState<Modal>(null);
@@ -92,6 +95,7 @@ function Operation({user,onAccessChanged}:{user:StaffUser;onAccessChanged:()=>Pr
     oscillator.connect(gain); gain.connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + 0.5);
   }, []);
   const load = useCallback(async () => {
+    if (isKitchen || view==='queue') return;
     if (loading.current || busyRef.current) return;
     loading.current = true;
     const number = ++seq.current;
@@ -102,7 +106,7 @@ function Operation({user,onAccessChanged}:{user:StaffUser;onAccessChanged:()=>Pr
       if (number >= applied.current) { applied.current = number; setState(data); setLoaded(true); setOnline(true); }
     } catch { if (number >= applied.current) setOnline(false); }
     finally { loading.current = false; }
-  }, [onAccessChanged]);
+  }, [onAccessChanged,isKitchen,view]);
   useEffect(() => {
     void load();
     const interval = setInterval(() => { setNow(Date.now()); void load(); }, 3000);
@@ -181,6 +185,7 @@ function Operation({user,onAccessChanged}:{user:StaffUser;onAccessChanged:()=>Pr
     } else setSound(false);
   };
   const pageTitles: Record<View, [string,string]> = {
+    queue: ['Fila de pedidos.', 'Prepare os pratos e avise o garçom quando estiverem prontos.'],
     salon: ['Seu salão, em sintonia.', 'Cada mesa no seu ritmo. Cada cliente com a sua conta.'],
     kitchen: ['Um toque conecta a equipe.', 'O chamado nasce na cozinha. A retirada e a entrega ficam com o garçom.'],
     service: ['Cada prato, no lugar certo.', 'Confira a mesa, retire na cozinha e registre a entrega ao cliente.'],
@@ -193,9 +198,9 @@ function Operation({user,onAccessChanged}:{user:StaffUser;onAccessChanged:()=>Pr
   };
   const dayClosed=state.operationStatus==='closed';
   const disabled = busy || !online || (dayClosed&&['salon','service','accounts','menu','kitchen'].includes(view));
-  const navigate = (next: View) => { setView(next); setSearch(''); window.scrollTo({top:0,behavior:'auto'}); };
+  const navigate = (next: View) => { if(!allowedNav.some(item=>item.id===next))return; setView(next); setSearch(''); window.scrollTo({top:0,behavior:'auto'}); };
 
-  return <div className="app-shell">
+  return <div className={'app-shell'+(view==='queue'?' queue-view':'')}>
     <aside className="sidebar">
       <a className="brand" href="/" aria-label="mesa, início"><span className="brand-symbol"><UtensilsCrossed size={23} /></span>mesa<span className="brand-point">.</span></a>
       <div className="restaurant"><span className="restaurant-icon"><Flame size={20} /></span><div><strong>Seu restaurante</strong><span>Ambiente de validação</span></div><ChevronRight size={16} /></div>
@@ -206,23 +211,23 @@ function Operation({user,onAccessChanged}:{user:StaffUser;onAccessChanged:()=>Pr
     </aside>
 
     <main className="main">
-      <header className="topbar"><div className="breadcrumb">Operação <ChevronRight size={13} /><strong>{nav.find(n => n.id === view)?.name}</strong></div><div className="topbar-right"><span className="demo-label">OPERAÇÃO MESA</span><button className={'sound-btn icon-btn ' + (sound ? 'sound-on' : '')} onClick={toggleSound} aria-label={sound ? 'Desativar aviso sonoro' : 'Ativar aviso sonoro'} title="Aviso sonoro neste dispositivo">{sound ? <Volume2 size={19} /> : <VolumeX size={19} />}</button><button className="notification-btn icon-btn" onClick={() => setModal({ kind: 'calls' })} aria-label={'Chamados da cozinha: ' + pendingCalls.length}><Bell size={20} />{pendingCalls.length > 0 && <span className="notification-dot" />}</button><span className="topbar-divider" /><div className="operator-avatar">{initials(person)}</div><div className="operator-label"><span>{isAdmin?'Administrador':'Garçom'}</span><strong>{person}</strong></div><a className="icon-btn signout-btn" href="/auth/logout" target="_top" aria-label="Sair da conta"><LogOut size={18}/></a></div></header>
+      <header className="topbar"><div className="breadcrumb">Operação <ChevronRight size={13} /><strong>{nav.find(n => n.id === view)?.name}</strong></div><div className="topbar-right"><span className="demo-label">OPERAÇÃO MESA</span>{view!=='queue'&&<><button className={'sound-btn icon-btn ' + (sound ? 'sound-on' : '')} onClick={toggleSound} aria-label={sound ? 'Desativar aviso sonoro' : 'Ativar aviso sonoro'} title="Aviso sonoro neste dispositivo">{sound ? <Volume2 size={19} /> : <VolumeX size={19} />}</button><button className="notification-btn icon-btn" onClick={() => setModal({ kind: 'calls' })} aria-label={'Chamados da cozinha: ' + pendingCalls.length}><Bell size={20} />{pendingCalls.length > 0 && <span className="notification-dot" />}</button><span className="topbar-divider" /></>}<div className="operator-avatar">{initials(person)}</div><div className="operator-label"><span>{roleLabels[user.role]}</span><strong>{person}</strong></div><a className="icon-btn signout-btn" href="/auth/logout" target="_top" aria-label="Sair da conta"><LogOut size={18}/></a></div></header>
 
       <div className="main-content">
-        {dayClosed&&<div className="operation-closed-banner"><CalendarCheck size={20}/><div><strong>Expediente finalizado.</strong><span>O administrador pode iniciar um novo expediente em Admin → Fechamento do dia. O relatório anterior permanece salvo.</span></div></div>}
-        {!online && <div className="network-banner"><WifiOff size={19} /><div><strong>Não conseguimos confirmar a conexão.</strong><span>Os pedidos só são enviados com confirmação. Seu rascunho fica salvo neste dispositivo.</span></div><button onClick={() => void load()}><RefreshCw size={15} />Reconectar</button></div>}
-        <div className="page-heading"><div><div className="eyebrow"><span className="live-dot" />{new Date(now).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' })}</div><h1>{pageTitles[view][0]}</h1><p>{pageTitles[view][1]}</p></div>{!['admin','reports','stock','access','service','kitchen'].includes(view) && <button className="btn primary" disabled={!loaded || disabled} onClick={() => view === 'kitchen' ? setModal({ kind: 'call' }) : startOrder()}>{view === 'kitchen' ? <Bell size={18} /> : <Plus size={19} />}{view === 'kitchen' ? 'Chamar garçom' : 'Novo pedido'}{cart.length > 0 && view !== 'kitchen' && <span className="cart-count">{cart.reduce((s,i) => s+i.quantity,0)}</span>}</button>}</div>
+        {view!=='queue'&&dayClosed&&<div className="operation-closed-banner"><CalendarCheck size={20}/><div><strong>Expediente finalizado.</strong><span>O administrador pode iniciar um novo expediente em Admin → Fechamento do dia. O relatório anterior permanece salvo.</span></div></div>}
+        {view!=='queue'&&!online && <div className="network-banner"><WifiOff size={19} /><div><strong>Não conseguimos confirmar a conexão.</strong><span>Os pedidos só são enviados com confirmação. Seu rascunho fica salvo neste dispositivo.</span></div><button onClick={() => void load()}><RefreshCw size={15} />Reconectar</button></div>}
+        {view!=='queue'&&<div className="page-heading"><div><div className="eyebrow"><span className="live-dot" />{new Date(now).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' })}</div><h1>{pageTitles[view][0]}</h1><p>{pageTitles[view][1]}</p></div>{!['admin','reports','stock','access','service','kitchen','queue'].includes(view) && <button className="btn primary" disabled={!loaded || disabled} onClick={() => view === 'kitchen' ? setModal({ kind: 'call' }) : startOrder()}>{view === 'kitchen' ? <Bell size={18} /> : <Plus size={19} />}{view === 'kitchen' ? 'Chamar garçom' : 'Novo pedido'}{cart.length > 0 && view !== 'kitchen' && <span className="cart-count">{cart.reduce((s,i) => s+i.quantity,0)}</span>}</button>}</div>}
 
-        {myCalls.length > 0 && !['kitchen','admin','reports','stock','access'].includes(view) && <button className="call-banner" onClick={() => setModal({ kind: 'calls' })}><span className="call-banner-icon"><Bell size={18} /></span><span><strong>Você tem um chamado</strong><span>{myCalls[0].reason}{myCalls[0].table_id && ' · Mesa ' + tableLabel(myCalls[0].table_id)}</span></span><span className="call-banner-cta">Ver chamado <ArrowRight size={16} /></span></button>}
+        {myCalls.length > 0 && !['kitchen','admin','reports','stock','access','queue'].includes(view) && <button className="call-banner" onClick={() => setModal({ kind: 'calls' })}><span className="call-banner-icon"><Bell size={18} /></span><span><strong>Você tem um chamado</strong><span>{myCalls[0].reason}{myCalls[0].table_id && ' · Mesa ' + tableLabel(myCalls[0].table_id)}</span></span><span className="call-banner-cta">Ver chamado <ArrowRight size={16} /></span></button>}
 
-        {!['admin','reports','stock','access','service','kitchen'].includes(view) && <section className="stats" aria-label="Resumo da operação">
+        {!['admin','reports','stock','access','service','kitchen','queue'].includes(view) && <section className="stats" aria-label="Resumo da operação">
           <div className="stat"><div className="stat-label">Mesas em uso<span className="stat-icon orange"><LayoutGrid size={18} /></span></div><strong>{loaded ? usedTables : '—'}<small>/ {state.tables.length || '—'}</small></strong><span className="stat-caption"><span className="tiny-dot green" />{loaded ? state.tables.length-usedTables : '—'} mesas livres</span></div>
           <div className="stat"><div className="stat-label">Clientes no salão<span className="stat-icon blue"><Users size={18} /></span></div><strong>{loaded ? String(active.length).padStart(2,'0') : '—'}<small>pessoas</small></strong><span className="stat-caption">{loaded ? totalSeats-active.length : '—'} assentos disponíveis</span></div>
           <div className="stat"><div className="stat-label">Pedidos em andamento<span className="stat-icon yellow"><ChefHat size={19} /></span></div><strong>{loaded ? String(activeOrders.length).padStart(2,'0') : '—'}<small>pedidos</small></strong><button className="stat-link" onClick={() => navigate('service')}>{readyOrders.length} prontos para servir <ArrowUpRight size={13} /></button></div>
           <div className="stat"><div className="stat-label">Total em aberto<span className="stat-icon green"><ReceiptText size={18} /></span></div><strong className="stat-money">{loaded ? money(openTotal) : '—'}</strong><span className="stat-caption">{active.length} comandas individuais</span></div>
         </section>}
 
-        {!loaded ? <div className="loading-panel"><span className="loader" /><h3>{online ? 'Preparando o salão…' : 'Aguardando conexão'}</h3><p>{online ? 'Conectando mesas, comandas e cozinha.' : 'Use Reconectar para tentar novamente.'}</p></div> : <>
+        {view==='queue'?<KitchenQueue notify={notify} onAccessChanged={onAccessChanged} onConnectionChanged={setOnline}/>:!loaded ? <div className="loading-panel"><span className="loader" /><h3>{online ? 'Preparando o salão…' : 'Aguardando conexão'}</h3><p>{online ? 'Conectando mesas, comandas e cozinha.' : 'Use Reconectar para tentar novamente.'}</p></div> : <>
           {view === 'admin' && <AdminPanel state={state} disabled={disabled} mutate={mutate} onAccount={id => setModal({kind:'account',id})} onReports={() => navigate('reports')} onOperationChanged={()=>void load()} />}
           {view === 'reports' && <ReportsPanel state={state} now={now} />}
           {view === 'stock' && <StockPanel />}

@@ -23,6 +23,7 @@ No Windows PowerShell, use `Copy-Item .env.example .env`. Abra **http://127.0.0.
 ```sh
 npm run typecheck
 npm run build
+node tests/kitchen-queue.mjs
 ```
 
 O build está em `dist`. `npm run preview` serve apenas os arquivos compilados; a API continua sendo um serviço separado.
@@ -39,13 +40,19 @@ O login da exportação usa Cloudflare Access na origem e as responsabilidades c
 
 ## Contrato da API
 
-As telas mantêm o contrato de `/api/session`, `/api/registration`, `/api/restaurant`, `/api/inventory`, `/api/staff`, `/api/kitchen-button` e `/api/day-closing`. Os modelos em `src/*-model.ts`, `src/model.ts` e `src/reports.ts` são uma cópia versionada dos contratos do backend. Alterações nesses contratos devem ser sincronizadas nos dois repositórios.
+As telas mantêm o contrato de `/api/session`, `/api/registration`, `/api/kitchen`, `/api/restaurant`, `/api/inventory`, `/api/staff`, `/api/kitchen-button` e `/api/day-closing`. Os modelos em `src/*-model.ts`, `src/model.ts` e `src/reports.ts` são uma cópia versionada dos contratos do backend. Alterações nesses contratos devem ser sincronizadas nos dois repositórios.
 
 ## Cadastro da equipe
 
 Pessoas autenticadas com Google e ainda sem acesso no Mesa veem a tela de cadastro, também disponível pelo caminho `/cadastro`. O e-mail vem da sessão; somente o nome é preenchido. Após o envio, a tela mostra a pendência e permite consultar a liberação. Recusa ou desativação não libera um novo cadastro para contornar a decisão do administrador.
 
-Em **Equipe e botão → Solicitações de cadastro**, o administrador revisa cada pedido e escolhe garçom ou administrador antes de aprovar. Publique primeiro o backend com a migração `0007_pale_gauntlet.sql`. Pessoas que ainda não constam na política da Cloudflare precisam ser autorizadas nessa política para chegar ao formulário; esta versão não abre o cadastro ao público.
+Em **Equipe e botão → Solicitações de cadastro**, o administrador revisa cada pedido e escolhe garçom, cozinha ou administrador antes de aprovar. Publique primeiro o backend com a migração `0007_pale_gauntlet.sql`. Pessoas que ainda não constam na política da Cloudflare precisam ser autorizadas nessa política para chegar ao formulário; esta versão não abre o cadastro ao público.
+
+## Fila e função Cozinha
+
+Contas com função **Cozinha** entram diretamente na aba **Fila de pedidos**, que também está disponível para administradores. A fila mostra dois pedidos por página no celular e em telas abaixo de 1024 px; a partir de 1024 px, mostra quatro cartões em duas colunas. Em celulares, os dois cartões ficam empilhados. Os controles permitem avançar e voltar entre páginas, e os filtros separam fila, preparo e pratos prontos. Itens e observações longos têm rolagem dentro do cartão. Em janelas com pouca altura, a página também pode rolar para preservar os controles.
+
+A fila atualiza a cada três segundos e mostra mesa, assento, itens, observações, tempo e garçom responsável. Cozinha pode iniciar preparo, marcar pronto e chamar o garçom. A confirmação de retirada e entrega permanece com o salão. A interface usa `/api/kitchen`, que limita os dados e as ações também no servidor. Não são necessários novos secrets ou alteração da política de login para usar essa função em uma conta já autorizada na Cloudflare.
 
 ## Limites do piloto
 
