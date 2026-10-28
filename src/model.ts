@@ -1,0 +1,13 @@
+export type Table = { id: string; label: string; seats: number; area: string };
+export type Product = { id: string; name: string; description: string; category: string; price: number; available: number; icon: string; version: number; archived: number };
+export type Account = { id: string; table_id: string; seat: number; name: string; waiter: string; waiter_id?:string|null; status: string; opened_at: number; paid_at: number | null; payment_method: string | null; paid_total: number | null };
+export type Item = { id: number; order_id: string; product_id: string; name: string; price: number; quantity: number };
+export type Order = { id: string; number: number; account_id: string; status: string; notes: string; created_at: number; updated_at: number; version: number; items: Item[];picked_by?:string|null;picked_name?:string;picked_at?:number|null;delivered_by?:string|null;delivered_at?:number|null };
+export type Call = { id: string; table_id: string; waiter: string; reason: string; status: string; created_at: number; acknowledged_at: number | null;acknowledged_by?:string|null;acknowledged_name?:string };
+export type AuditEntry = { id: string; entity_type: string; entity_id: string; action: string; reason: string; created_at: number };
+export type State = { tables: Table[]; products: Product[]; accounts: Account[]; orders: Order[]; calls: Call[]; audit: AuditEntry[]; serverTime: number; staffNames?:string[];operationStatus?:string };
+export const waiters = ['Giovanni', 'Ana', 'Lucas'];
+export const money = (cents: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+export const orderTotal = (order: Order) => order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+export const accountTotal = (state: State, id: string) => state.orders.filter(o => o.account_id === id && o.status !== 'canceled').reduce((sum, o) => sum + orderTotal(o), 0);
+export const labels: Record<string, string> = { pending: 'Na fila', preparing: 'Em preparo', ready: 'Pronto', collected:'Retirado na cozinha', delivered: 'Entregue', canceled: 'Cancelado' };
