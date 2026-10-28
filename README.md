@@ -1,20 +1,22 @@
-# mesa_front
+# mesa.front
 
 Interface do Mesa para salão, comandas individuais, entregas, administração, estoque, predefinições e fechamento do dia.
 
-React + TypeScript + Vite. Este repositório contém somente a interface; API, permissões, banco e cálculos oficiais ficam em `mesa_back`.
+React + TypeScript + Vite. Este repositório contém somente a interface; API, permissões, banco e cálculos oficiais ficam em [mesa.backend](https://github.com/GiovanniDEVazevedo/mesa.backend).
 
 ## Executar localmente
 
-Use Node.js 24 LTS. Clone `mesa_front` e `mesa_back` como pastas irmãs.
+Use Node.js 24 LTS. Clone `mesa.front` e `mesa.backend` como pastas irmãs.
 
 ```sh
+git clone https://github.com/GiovanniDEVazevedo/mesa.front.git
+cd mesa.front
 npm ci
 cp .env.example .env
 npm run dev
 ```
 
-No Windows PowerShell, use `Copy-Item .env.example .env`. Abra **http://127.0.0.1:5173**. Inicie também a API conforme o README de `mesa_back`. O Vite encaminha `/api/*` e `/auth/*` para `127.0.0.1:8787`, sem expor credenciais no JavaScript.
+No Windows PowerShell, use `Copy-Item .env.example .env`. Abra **http://127.0.0.1:5173**. Inicie também a API conforme o [README de mesa.backend](https://github.com/GiovanniDEVazevedo/mesa.backend#executar-localmente). O Vite encaminha `/api/*` e `/auth/*` para `127.0.0.1:8787`, sem expor credenciais no JavaScript.
 
 ## Verificar e compilar
 
