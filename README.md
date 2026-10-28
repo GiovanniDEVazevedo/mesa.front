@@ -48,11 +48,11 @@ Pessoas autenticadas com Google e ainda sem acesso no Mesa veem a tela de cadast
 
 Em **Equipe e botão → Solicitações de cadastro**, o administrador revisa cada pedido e escolhe garçom, cozinha ou administrador antes de aprovar. Publique primeiro o backend com a migração `0007_pale_gauntlet.sql`. Pessoas que ainda não constam na política da Cloudflare precisam ser autorizadas nessa política para chegar ao formulário; esta versão não abre o cadastro ao público.
 
-## Fila e função Cozinha
+## Aba e função Cozinha
 
-Contas com função **Cozinha** entram diretamente na aba **Fila de pedidos**, que também está disponível para administradores. A fila mostra dois pedidos por página no celular e em telas abaixo de 1024 px; a partir de 1024 px, mostra quatro cartões em duas colunas. Em celulares, os dois cartões ficam empilhados. Os controles permitem avançar e voltar entre páginas, e os filtros separam fila, preparo e pratos prontos. Itens e observações longos têm rolagem dentro do cartão. Em janelas com pouca altura, a página também pode rolar para preservar os controles.
+Contas com função **Cozinha** entram diretamente na aba **Cozinha**, que também está disponível para administradores. A fila mostra dois pedidos por página no celular e em telas abaixo de 1024 px; a partir de 1024 px, mostra quatro cartões em duas colunas. Em celulares, os dois cartões ficam empilhados. Os controles permitem avançar e voltar entre páginas. A aba reúne a visualização dos pedidos e o botão **Chamar garçom**. Itens e observações longos têm rolagem dentro do cartão. Em janelas com pouca altura, a página também pode rolar para preservar os controles.
 
-A fila atualiza a cada três segundos e mostra mesa, assento, itens, observações, tempo e garçom responsável. Cozinha pode iniciar preparo, marcar pronto e chamar o garçom. A confirmação de retirada e entrega permanece com o salão. A interface usa `/api/kitchen`, que limita os dados e as ações também no servidor. Não são necessários novos secrets ou alteração da política de login para usar essa função em uma conta já autorizada na Cloudflare.
+A fila atualiza a cada três segundos e mostra mesa, assento, itens, observações, tempo e garçom responsável. A conta Cozinha apenas visualiza os pedidos e chama o garçom. Não há controles para iniciar preparo ou marcar pratos prontos. A confirmação de retirada e entrega permanece com o salão. A interface usa `/api/kitchen`, que limita os dados e as ações também no servidor. Não são necessários novos secrets ou alteração da política de login para usar essa função em uma conta já autorizada na Cloudflare.
 
 ## Limites do piloto
 

@@ -6,13 +6,11 @@ export type KitchenOrder = {
   items: { name: string; quantity: number }[];
 };
 export type KitchenState = { orders: KitchenOrder[]; operationStatus: string; callPending: boolean; serverTime: number };
-export type KitchenFilter = 'all' | KitchenStatus;
 export const kitchenDesktopQuery = '(min-width: 1024px)';
-export function kitchenPage(orders: KitchenOrder[], filter: KitchenFilter, requestedPage: number, pageSize: 2 | 4) {
-  const filtered = orders.filter(order => filter === 'all' || order.status === filter)
-    .sort((a, b) => a.created_at - b.created_at || a.number - b.number);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+export function kitchenPage(orders: KitchenOrder[], requestedPage: number, pageSize: 2 | 4) {
+  const sorted = [...orders].sort((a, b) => a.created_at - b.created_at || a.number - b.number);
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
   const page = Math.min(Math.max(0, Math.floor(requestedPage) || 0), pageCount - 1);
   const start = page * pageSize;
-  return { orders: filtered.slice(start, start + pageSize), total: filtered.length, page, pageCount, start };
+  return { orders: sorted.slice(start, start + pageSize), total: sorted.length, page, pageCount, start };
 }
