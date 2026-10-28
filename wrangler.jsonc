@@ -1,9 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mesa-front",
+  "main": "worker/index.ts",
+  "workers_dev": false,
   "compatibility_date": "2026-05-15",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   }
 }

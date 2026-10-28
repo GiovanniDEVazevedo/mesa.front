@@ -29,9 +29,11 @@ O build está em `dist`. `npm run preview` serve apenas os arquivos compilados; 
 
 ## Publicação própria
 
-O arquivo `wrangler.jsonc` prepara os arquivos estáticos para Cloudflare Workers. Configure um domínio próprio e publique front e back na mesma origem: `/api/*` e `/auth/*` devem ser atendidos pelo Worker `mesa-back`, e os demais caminhos pelos arquivos de `mesa-front`. Veja o guia de implantação no backend antes de publicar.
+O arquivo `wrangler.jsonc` publica os arquivos estáticos no Worker interno `mesa-front`. Publique este repositório primeiro com `npm run deploy`, na mesma conta Cloudflare do backend. O Worker `mesa-back` recebe o acesso público e busca a interface pela ligação de serviço `FRONTEND`, já declarada no backend. Abra o endereço de `mesa-back` para usar o sistema completo.
 
-Essa configuração evita cookies entre sites e não exige CORS aberto. `MESA_API_PROXY` serve somente ao desenvolvimento e não configura rotas na hospedagem.
+`workers_dev=false` mantém o frontend como serviço interno; ele não precisa de um endereço público separado. O primeiro deploy de teste pode usar o endereço `workers.dev` do backend. Siga o [passo a passo completo](https://github.com/GiovanniDEVazevedo/mesa.backend/blob/main/docs/subir-na-cloudflare.md).
+
+Essa configuração mantém interface e API na mesma origem e não exige CORS aberto. `MESA_API_PROXY` serve somente ao desenvolvimento. Um domínio próprio pode ser adicionado depois ao backend.
 
 O login da exportação usa Cloudflare Access na origem e as responsabilidades continuam no banco do Mesa. A edição anteriormente publicada no ChatGPT Sites tem implantação e autenticação separadas.
 
